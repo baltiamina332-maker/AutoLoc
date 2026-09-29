@@ -1,0 +1,30 @@
+package tn.esprit.autoloc.Entities;
+
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+@Entity
+@Table(name = "employe")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+public class Employe {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long idEmploye;
+
+    private String nom;
+
+    private String prenom;
+
+    @Enumerated(EnumType.STRING)
+    @Column(columnDefinition = "VARCHAR(30)")
+    private RoleEmploye role;
+
+    // Association N Employe -> 1 Agence ajoutee a la Seance 3.
+}
