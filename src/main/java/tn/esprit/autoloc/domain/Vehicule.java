@@ -1,4 +1,4 @@
-package tn.esprit.autoloc.Entities;
+package tn.esprit.autoloc.domain;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -33,7 +33,7 @@ public class Vehicule {
 
     @Enumerated(EnumType.STRING)
     @Column(columnDefinition = "VARCHAR(30)")
-    private StatusVehicule status;
+    private StatutVehicule status;
 
     private BigDecimal tarifJournalier;
 

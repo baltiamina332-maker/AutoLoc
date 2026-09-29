@@ -1,4 +1,4 @@
-package tn.esprit.autoloc.Entities;
+package tn.esprit.autoloc.domain;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -6,28 +6,28 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "reservation")
+@Table(name = "paiement")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class Reservation {
+public class Paiement {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long idReservation;
+    private Long idPaiement;
 
-    private LocalDate dateDebut;
+    private BigDecimal montant;
 
-    private LocalDate dateFin;
+    private LocalDate datePaiement;
 
     @Enumerated(EnumType.STRING)
     @Column(columnDefinition = "VARCHAR(30)")
-    private StatutReservation statut;
+    private ModePaiement modePaiement;
 
-    // Associations (N Reservation -> 1 Client ; N Reservation -> 1 Vehicule ;
-    // 1 Reservation -> 1 Contrat) ajoutees a la Seance 3.
+    // Association N Paiement -> 1 Contrat ajoutee a la Seance 3.
 }

@@ -8,11 +8,11 @@
         <version>4.1.1</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
-    <groupId>tn.esprit</groupId>
-    <artifactId>autoloc</artifactId>
+    <groupId>tn.esprit.autoloc</groupId>
+    <artifactId>autoloc-api</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>autoloc</name>
-    <description>autoloc</description>
+    <name>autoloc-api</name>
+    <description>autoloc-api</description>
     <url/>
     <licenses>
         <license/>

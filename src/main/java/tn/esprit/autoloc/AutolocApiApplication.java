@@ -4,10 +4,10 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class AutolocApplication {
+public class AutolocApiApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(AutolocApplication.class, args);
+		SpringApplication.run(AutolocApiApplication.class, args);
 	}
 
 }
