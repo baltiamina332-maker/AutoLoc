@@ -28,6 +28,14 @@ public class Reservation {
     @Column(columnDefinition = "VARCHAR(30)")
     private StatutReservation statut;
 
-    // Associations (N Reservation -> 1 Client ; N Reservation -> 1 Vehicule ;
-    // 1 Reservation -> 1 Contrat) ajoutees a la Seance 3.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "client_id", nullable = false)
+    private Client client;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "vehicule_id", nullable = false)
+    private Vehicule vehicule;
+
+    @OneToOne(mappedBy = "reservation")
+    private Contrat contrat;
 }

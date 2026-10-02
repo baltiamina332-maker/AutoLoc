@@ -1,12 +1,14 @@
 package tn.esprit.autoloc.domain;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "vehicule")
@@ -18,23 +20,41 @@ public class Vehicule {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long idvehicule;
+    private Long idVehicule;
 
-    @Column(unique = true)
+    @Column(nullable = false, unique = true, length = 20)
     private String immatriculation;
 
+    @Column(nullable = false, length = 50)
     private String marque;
 
+    @Column(nullable = false, length = 50)
     private String modele;
 
     @Enumerated(EnumType.STRING)
-    @Column(columnDefinition = "VARCHAR(30)")
+    @Column(nullable = false, length = 20)
     private CategorieVehicule categorie;
 
-    @Enumerated(EnumType.STRING)
-    @Column(columnDefinition = "VARCHAR(30)")
-    private StatutVehicule status;
-
+    @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal tarifJournalier;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private StatutVehicule statut;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "agence_id")
+    private Agence agence;
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(name = "vehicule_equipement",
+            joinColumns = @JoinColumn(name = "vehicule_id"),
+            inverseJoinColumns = @JoinColumn(name = "equipement_id"))
+    private List<Equipement> equipements = new ArrayList<>();
+
+    @OneToMany(mappedBy = "vehicule", fetch = FetchType.LAZY)
+    private List<Reservation> reservations = new ArrayList<>();
+
+    @OneToMany(mappedBy = "vehicule", fetch = FetchType.LAZY)
+    private List<Maintenance> maintenances = new ArrayList<>();
 }

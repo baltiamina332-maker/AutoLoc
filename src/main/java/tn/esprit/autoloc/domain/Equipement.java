@@ -6,6 +6,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Table(name = "equipement")
 @Getter
@@ -18,8 +21,9 @@ public class Equipement {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long idEquipement;
 
-    @Column(nullable = false)
-    private String libelle; // GPS, siege bebe, coffre de toit...
+    @Column(nullable = false, unique = true, length = 50)
+    private String libelle;
 
-    // Association @ManyToMany avec Vehicule ajoutee a la Seance 3.
+    @ManyToMany(mappedBy = "equipements", fetch = FetchType.LAZY)
+    private List<Vehicule> vehicules = new ArrayList<>();
 }

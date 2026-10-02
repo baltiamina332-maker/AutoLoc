@@ -26,5 +26,7 @@ public class Employe {
     @Column(columnDefinition = "VARCHAR(30)")
     private RoleEmploye role;
 
-    // Association N Employe -> 1 Agence ajoutee a la Seance 3.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "agence_id")
+    private Agence agence;
 }

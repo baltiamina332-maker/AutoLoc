@@ -29,5 +29,7 @@ public class Paiement {
     @Column(columnDefinition = "VARCHAR(30)")
     private ModePaiement modePaiement;
 
-    // Association N Paiement -> 1 Contrat ajoutee a la Seance 3.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "contrat_id", nullable = false)
+    private Contrat contrat;
 }

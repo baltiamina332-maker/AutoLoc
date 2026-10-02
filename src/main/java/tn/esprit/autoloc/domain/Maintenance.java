@@ -26,5 +26,7 @@ public class Maintenance {
 
     private String description;
 
-    // Association N Maintenance -> 1 Vehicule ajoutee a la Seance 3.
+    @ManyToOne(cascade = CascadeType.PERSIST, fetch = FetchType.LAZY)
+    @JoinColumn(name = "vehicule_id", nullable = false)
+    private Vehicule vehicule;
 }
