@@ -1,48 +1,206 @@
-# Notes Atelier 4 : couche Service, IoC et DI
+# Atelier 4 — IoC, Injection de Dépendances et Couche Service
+
+**Projet :** AutoLoc  
+**Module :** Architecture des Systèmes d'Information  
+**Technologies :** Java 17, Spring Boot, Spring Data JPA, Lombok, MySQL, SonarQube for IDE
 
 ## A. Modes d'injection comparés
 
-| Critère | Constructeur | Attribut (@Autowired) |
+| Critère | Injection par constructeur | Injection par attribut |
 |---|---|---|
-| Champ final possible | Oui | Non |
-| Dépendance visible dans la signature de la classe | Oui | Non (cachée) |
-| Utilisable avec new hors conteneur sans dépendance null | Oui (le constructeur impose la dépendance) | Non (le champ reste null) |
-| Signalé par SonarQube for IDE | Non | Oui (règle S6813, à confirmer dans le panneau) |
+| Annotation utilisée | `@RequiredArgsConstructor` | `@Autowired` |
+| Champ `final` possible | Oui | Non |
+| Dépendances explicites | Oui, dans le constructeur | Non, cachées dans les attributs |
+| Utilisation hors conteneur Spring | Oui, si la dépendance est fournie | Risque de `NullPointerException` |
+| Testabilité | Facile | Plus difficile |
+| Signalement SonarQube | Aucun problème | Règle S6813 |
+| Recommandée | Oui | Non |
 
-## B. Services
+**Conclusion :**
 
-| Service | Dépendances injectées | Mode | Justification |
+L'injection par constructeur est préférable car elle garantit que les dépendances obligatoires sont fournies lors de la création de l'objet.
+
+Dans notre projet AutoLoc, nous utilisons `@RequiredArgsConstructor` de Lombok pour générer automatiquement les constructeurs des attributs `final`.
+
+Spring utilise ensuite ces constructeurs pour injecter les repositories.
+
+## B. Services et dépendances injectées
+
+| Service | Dépendance injectée | Mode d'injection | Justification |
 |---|---|---|---|
-| AgenceServiceImpl | IAgenceRepository | Constructeur | Champ final, dépendance typée par l'interface. |
-| EmployeServiceImpl | IEmployeRepository | Constructeur | Idem. |
-| VehiculeServiceImpl | IVehiculeRepository | Constructeur | Idem. |
-| EquipementServiceImpl | IEquipementRepository | Constructeur | Idem. |
-| ClientServiceImpl | IClientRepository | Constructeur | Idem. |
-| ReservationServiceImpl | IReservationRepository | Constructeur | Idem. |
-| ContratServiceImpl | IContratRepository | Constructeur | Idem ; la suppression passe par le contexte de persistance (cascade sur les paiements). |
-| PaiementServiceImpl | IPaiementRepository | Constructeur | Idem ; lecture seule, les écritures passent par le Contrat. |
-| MaintenanceServiceImpl | IMaintenanceRepository | Constructeur | Idem. |
+| AgenceServiceImpl | IAgenceRepository | Constructeur | Gestion des agences |
+| EmployeServiceImpl | IEmployeRepository | Constructeur | Gestion des employés |
+| VehiculeServiceImpl | IVehiculeRepository | Constructeur | Gestion des véhicules |
+| EquipementServiceImpl | IEquipementRepository | Constructeur | Gestion des équipements |
+| ClientServiceImpl | IClientRepository | Constructeur | Gestion des clients |
+| ReservationServiceImpl | IReservationRepository | Constructeur | Gestion des réservations |
+| ContratServiceImpl | IContratRepository | Constructeur | Gestion des contrats |
+| PaiementServiceImpl | IPaiementRepository | Constructeur | Consultation des paiements uniquement |
+| MaintenanceServiceImpl | IMaintenanceRepository | Constructeur | Gestion des maintenances |
 
-## C. Messages d'erreur
+**Justification générale :**
 
-**Message 1** (NoSuchBeanDefinitionException) : aucun bean de type IContratService. Causes probables : @Service oublié sur ContratServiceImpl, ou classe placée hors du package tn.esprit.autoloc (non détectée par le scan). Correction : ajouter @Service ou déplacer la classe.
+Chaque service dépend d'une interface Repository et non d'une implémentation concrète. Cela favorise le couplage faible et facilite les tests et la maintenance.
 
-**Message 2** (NoUniqueBeanDefinitionException) : deux beans du même type (emailNotificateur et smsNotificateur). Correction 1 : @Primary sur la classe du bean choisi par défaut (sur la classe). Correction 2 : @Qualifier("emailNotificateur") sur le paramètre du constructeur du contrôleur.
+Les classes d'implémentation utilisent `@Service` pour être détectées automatiquement par le conteneur Spring.
 
-**Message 3** (dépendance circulaire) : clientServiceImpl et reservationServiceImpl s'injectent mutuellement. Avec l'injection par constructeur, chaque bean exige l'autre déjà créé : aucun ne peut être instancié en premier. Piste : extraire la responsabilité commune dans un troisième service dont les deux dépendent.
+L'annotation `@RequiredArgsConstructor` permet l'injection par constructeur sans écrire manuellement le constructeur.
+
+Les services sont sans état afin de pouvoir être partagés entre plusieurs requêtes.
+
+**Règles métier implémentées :**
+
+- Agence : refuser un nom vide.
+- Employe : refuser un nom vide ou un rôle absent.
+- Vehicule : refuser un tarif journalier négatif.
+- Equipement : refuser un libellé vide.
+- Client : refuser un nom ou un e-mail vide.
+- Reservation : refuser une date de fin antérieure à la date de début.
+- Contrat : refuser un montant total négatif.
+- Paiement : autoriser uniquement `findById()` et `findAll()`.
+- Maintenance : refuser une date de fin antérieure à la date de début.
+
+## C. Diagnostic des messages d'erreur du conteneur Spring
+
+### Message 1 — Bean introuvable
+
+**Erreur :** `NoSuchBeanDefinitionException`
+
+Spring ne trouve pas de bean de type `IContratService`.
+
+**Causes possibles :**
+
+1. L'annotation `@Service` manque sur `ContratServiceImpl`.
+2. La classe est placée en dehors des packages analysés par Spring.
+
+**Correction :**
+
+Ajouter `@Service` sur `ContratServiceImpl` et vérifier que la classe appartient à un sous-package de `tn.esprit.autoloc`.
+
+### Message 2 — Plusieurs beans du même type
+
+**Erreur :** `NoUniqueBeanDefinitionException`
+
+Spring trouve deux implémentations possibles : `emailNotificateur` et `smsNotificateur`.
+
+**Correction 1 :** ajouter `@Primary` sur la classe de l'implémentation à sélectionner par défaut.
+
+**Correction 2 :** utiliser `@Qualifier("emailNotificateur")` sur le paramètre du constructeur afin de sélectionner explicitement le bean voulu.
+
+### Message 3 — Dépendance circulaire
+
+**Erreur :** `BeanCurrentlyInCreationException`
+
+`ClientServiceImpl` dépend de `ReservationServiceImpl`, et `ReservationServiceImpl` dépend de `ClientServiceImpl`.
+
+**Cause :**
+
+Les deux services ont besoin l'un de l'autre pour être créés. Avec l'injection par constructeur, chacun doit recevoir ses dépendances avant de pouvoir être instancié complètement.
+
+**Correction :**
+
+Revoir l'architecture pour supprimer la dépendance circulaire, par exemple en extrayant les traitements communs dans un troisième service indépendant.
 
 ## D. Anomalies SonarQube for IDE
 
-| Anomalie | Règle / explication | Correction apportée |
-|---|---|---|
-| Injection par attribut (étape 2) | S6813 : l'injection par attribut cache les dépendances et empêche le champ final. | Retour à l'injection par constructeur avec @RequiredArgsConstructor. |
-| RuntimeException lancée dans findById (étape 4) | S112 : une exception générique ne dit rien du problème. | Retour à ResourceNotFoundException. |
-| à compléter | à compléter | à compléter |
+Trois anomalies ont été observées durant les expériences de l'Atelier 4.
+
+| Règle | Anomalie | Explication | Correction |
+|---|---|---|---|
+| S6813 | Injection par attribut | Les dépendances sont cachées et difficiles à tester | Injection par constructeur avec `@RequiredArgsConstructor` et un champ `final` |
+| S112 | Exception générique | `RuntimeException` ne représente pas précisément l'erreur métier | Utiliser `ResourceNotFoundException` |
+| S3655 | Accès non sécurisé à Optional | L'appel à `Optional.get()` peut échouer si aucune valeur n'est présente | Utiliser `orElseThrow()` |
+
+**Expérience 1 :**
+
+Nous avons temporairement remplacé l'injection par constructeur dans `ContratServiceImpl` par une injection utilisant `@Autowired` sur un attribut.
+
+SonarQube a détecté la règle **S6813**. Nous avons ensuite restauré l'injection par constructeur.
+
+**Expérience 2 :**
+
+Nous avons temporairement remplacé `ResourceNotFoundException` par `RuntimeException`.
+
+SonarQube a détecté la règle **S112**, signalant l'utilisation d'une exception générique.
+
+**Expérience 3 :**
+
+Nous avons utilisé `Optional.get()` pour récupérer un contrat.
+
+SonarQube a détecté la règle **S3655**, signalant un accès potentiellement dangereux à une valeur optionnelle.
+
+**Résultat final :**
+
+Après restauration de `ResourceNotFoundException`, de `orElseThrow()` et de l'injection par constructeur, une nouvelle analyse de `ContratServiceImpl` n'a affiché aucune anomalie.
 
 ## E. Questions de compréhension
 
-1. Le new de ContratServiceImpl est exécuté par le conteneur Spring au démarrage : il détecte @Service lors du scan, puis appelle le constructeur en lui fournissant le proxy de IContratRepository.
-2. Un contrôleur dépend de l'interface pour rester faiblement couplé : on peut changer d'implémentation sans modifier le contrôleur, et fournir une version de remplacement.
-3. Un service est un singleton partagé par tous les threads. Exemple de bug : un attribut « contrat courant » écrasé par une requête concurrente fait qu'un utilisateur lit ou modifie le contrat d'un autre.
-4. save avec un id fait un merge qui écraserait toutes les colonnes avec les valeurs reçues (y compris null) et, avec orphanRemoval, pourrait vider la collection de paiements. On charge donc l'existant et on ne recopie que les attributs modifiables.
-5. @Component marque une classe détectée par le scan ; @Bean est posé sur une méthode d'une classe @Configuration pour déclarer un bean qu'on ne peut pas annoter (bibliothèque, JDK). @Primary désigne le candidat par défaut (sur la classe) ; @Qualifier choisit explicitement un bean à l'injection. IPaiementService est en lecture seule car le paiement fait partie du Contrat (composition) : on le crée et le retire via le Contrat, avec cascade et orphanRemoval.
+### 1. Où est le new de ContratServiceImpl et qui l'exécute ?
+
+Le développeur n'écrit pas directement `new ContratServiceImpl(...)`.
+
+C'est le conteneur Spring IoC qui crée et gère le bean `ContratServiceImpl` grâce à l'annotation `@Service`.
+
+Spring fournit automatiquement son repository par injection de dépendances.
+
+### 2. Pourquoi un contrôleur dépendra-t-il de IContratService et non de ContratServiceImpl ?
+
+Parce que le contrôleur doit dépendre d'une abstraction et non d'une implémentation concrète.
+
+Cela permet de remplacer l'implémentation du service sans modifier le contrôleur et facilite les tests unitaires.
+
+Ce principe favorise le couplage faible.
+
+### 3. Pourquoi un service singleton doit-il rester sans état ? Donner un exemple de bug.
+
+Un service singleton possède une seule instance partagée entre plusieurs utilisateurs et requêtes.
+
+S'il conserve des données modifiables propres à chaque requête, les utilisateurs risquent d'interférer entre eux.
+
+**Exemple :** si `ContratServiceImpl` conserve un attribut `contratCourant`, une requête pourrait remplacer le contrat utilisé par une autre requête.
+
+Les données temporaires doivent donc rester dans les variables locales des méthodes.
+
+### 4. Pourquoi update charge-t-il l'entité existante avant d'appeler save ?
+
+La méthode `update()` doit d'abord récupérer l'entité existante, modifier uniquement les attributs autorisés, puis appeler `save()`.
+
+Cette approche préserve l'identifiant et les associations qui ne doivent pas être remplacées.
+
+Enregistrer directement l'objet reçu pourrait écraser certaines données avec des valeurs nulles ou modifier involontairement des collections liées.
+
+Dans AutoLoc, cela est particulièrement important pour les paiements d'un contrat, car l'association utilise `orphanRemoval = true`.
+
+### 5. Différences entre les annotations et particularité de Paiement
+
+**Différence entre `@Component` et `@Bean` :**
+
+- `@Component` permet la détection automatique d'une classe comme bean Spring.
+- `@Bean` permet de déclarer explicitement un bean à l'aide d'une méthode dans une classe de configuration.
+
+**Différence entre `@Primary` et `@Qualifier` :**
+
+- `@Primary` indique le bean à privilégier par défaut lorsque plusieurs implémentations existent.
+- `@Qualifier` permet de choisir explicitement le bean à injecter.
+
+**Pourquoi IPaiementService n'expose-t-il pas create, update et delete ?**
+
+Parce que dans notre modèle AutoLoc, les paiements sont gérés à travers le contrat auquel ils appartiennent.
+
+L'association Contrat–Paiement utilise `cascade = CascadeType.ALL` et `orphanRemoval = true`.
+
+Le service Paiement est donc limité à la consultation avec `findById()` et `findAll()`.
+
+---
+
+## Conclusion
+
+Cet atelier nous a permis de mettre en place la couche Service de l'application AutoLoc.
+
+Nous avons appliqué l'Inversion de Contrôle et l'Injection de Dépendances pour relier les services aux repositories de manière faiblement couplée.
+
+Les services centralisent désormais les opérations CRUD et les règles métier.
+
+L'analyse SonarQube a permis d'identifier et de corriger plusieurs problèmes liés à l'injection et à la gestion des exceptions.
+
+La couche Service est prête pour son utilisation depuis les contrôleurs REST lors de l'Atelier 5.

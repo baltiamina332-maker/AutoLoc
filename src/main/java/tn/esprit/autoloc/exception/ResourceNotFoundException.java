@@ -1,8 +1,8 @@
-package tn.esprit.autoloc.exception;
+package tn.esprit.autoloc.Exception;
 
 public class ResourceNotFoundException extends RuntimeException {
 
-    public ResourceNotFoundException(String resource, Long id) {
-        super(resource + " introuvable : " + id);
+    public ResourceNotFoundException(String ressource, Long id) {
+        super(ressource + " introuvable avec l'identifiant " + id);
     }
 }
